@@ -1,0 +1,30 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /aspirasi/{aspirasiId} {
+
+      // Siapa saja boleh membaca papan aspirasi (anonim, tanpa login).
+      allow read: if true;
+
+      // Siapa saja boleh mengirim aspirasi baru, selama bentuknya sesuai
+      // (tidak bisa mengatur vote awal selain 0, atau menambah field lain).
+      allow create: if request.resource.data.keys().hasOnly(
+                        ['kategori', 'isi', 'createdAt', 'upvotes', 'downvotes']
+                      )
+                    && request.resource.data.kategori in ['ide-acara', 'evaluasi', 'akademis']
+                    && request.resource.data.isi is string
+                    && request.resource.data.isi.size() > 0
+                    && request.resource.data.isi.size() < 1000
+                    && request.resource.data.upvotes == 0
+                    && request.resource.data.downvotes == 0;
+
+      // Update hanya boleh mengubah upvotes/downvotes (untuk fitur vote publik).
+      // Isi aspirasi tidak bisa diubah lagi setelah terkirim.
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['upvotes', 'downvotes']);
+
+      // Tidak ada yang boleh menghapus lewat aplikasi (hapus manual lewat Firebase Console kalau perlu).
+      allow delete: if false;
+    }
+  }
+}
