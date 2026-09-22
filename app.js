@@ -1,12 +1,31 @@
 // ============================================================
-// SOCIETY — app.js (versi DEMO, tanpa database/login)
-// Semua data aspirasi disimpan di localStorage browser ini saja.
-// Cocok untuk demo/presentasi. Untuk versi asli yang datanya
-// tersambung ke semua siswa, pakai versi Firebase.
+// SOCIETY — app.js (versi TERHUBUNG ANTAR DEVICE)
+// Backend: Firebase Firestore. Tidak ada login/admin — semua orang
+// bisa mengirim aspirasi & vote, dan semua aspirasi langsung
+// tersinkron real-time ke semua device yang membuka website ini.
+// Isi firebaseConfig di bawah sesuai project Firebase kamu.
+// Lihat README.md untuk panduan setup.
 // ============================================================
 
-const STORAGE_KEY = "society_demo_aspirasi";
-const VOTE_KEY = "society_demo_votes";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getFirestore, collection, addDoc, onSnapshot, doc, updateDoc,
+  serverTimestamp, query, orderBy, increment
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+// >>> GANTI dengan config project Firebase kamu (Project settings > SDK setup) <<<
+const firebaseConfig = {
+  apiKey: "GANTI_DENGAN_API_KEY",
+  authDomain: "GANTI.firebaseapp.com",
+  projectId: "GANTI_PROJECT_ID",
+  storageBucket: "GANTI.appspot.com",
+  messagingSenderId: "GANTI",
+  appId: "GANTI"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const aspirasiRef = collection(db, "aspirasi");
 
 const KATEGORI_LABEL = {
   "ide-acara": "Ide Acara",
@@ -15,23 +34,16 @@ const KATEGORI_LABEL = {
 };
 
 // ------------------------------------------------------------
-// Penyimpanan lokal
+// Vote tracking per-browser (supaya 1 device tidak vote dobel)
 // ------------------------------------------------------------
-function getAspirasi() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); }
-  catch { return []; }
-}
-function saveAspirasi(list) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-}
 function getVotedMap() {
-  try { return JSON.parse(localStorage.getItem(VOTE_KEY) || "{}"); }
+  try { return JSON.parse(localStorage.getItem("society_votes") || "{}"); }
   catch { return {}; }
 }
 function setVoted(id, type) {
   const map = getVotedMap();
   map[id] = type;
-  localStorage.setItem(VOTE_KEY, JSON.stringify(map));
+  localStorage.setItem("society_votes", JSON.stringify(map));
 }
 
 function escapeHtml(str) {
@@ -39,35 +51,11 @@ function escapeHtml(str) {
   div.textContent = str;
   return div.innerHTML;
 }
-
-function formatTanggal(iso) {
-  const d = new Date(iso);
+function formatTanggal(ts) {
+  if (!ts) return "";
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
   return d.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
 }
-
-// Beberapa contoh aspirasi supaya papan tidak kosong saat demo pertama kali.
-function seedIfEmpty() {
-  if (getAspirasi().length > 0) return;
-  saveAspirasi([
-    {
-      id: crypto.randomUUID(),
-      kategori: "ide-acara",
-      isi: "Adain lomba futsal antar kelas pas class meeting semester ini, dong!",
-      createdAt: new Date().toISOString(),
-      upvotes: 8,
-      downvotes: 1
-    },
-    {
-      id: crypto.randomUUID(),
-      kategori: "akademis",
-      isi: "Jadwal try out sering bentrok sama jadwal ekskul, bisa dievaluasi lagi?",
-      createdAt: new Date().toISOString(),
-      upvotes: 5,
-      downvotes: 0
-    }
-  ]);
-}
-seedIfEmpty();
 
 // ------------------------------------------------------------
 // Tab navigation
@@ -91,38 +79,47 @@ const form = document.getElementById("form-aspirasi");
 const textarea = document.getElementById("isi-aspirasi");
 const charCount = document.getElementById("char-count");
 const formStatus = document.getElementById("form-status");
+const btnSubmit = form.querySelector("button[type='submit']");
 
 textarea.addEventListener("input", () => {
   charCount.textContent = textarea.value.length;
 });
 
-form.addEventListener("submit", (e) => {
+form.addEventListener("submit", async (e) => {
   e.preventDefault();
   const kategori = form.querySelector("input[name='kategori']:checked")?.value;
   const isi = textarea.value.trim();
   if (!kategori || !isi) return;
 
-  const list = getAspirasi();
-  list.unshift({
-    id: crypto.randomUUID(),
-    kategori,
-    isi,
-    createdAt: new Date().toISOString(),
-    upvotes: 0,
-    downvotes: 0
-  });
-  saveAspirasi(list);
+  btnSubmit.disabled = true;
+  formStatus.textContent = "Mengirim…";
+  formStatus.className = "form-status";
 
-  form.reset();
-  charCount.textContent = "0";
-  formStatus.textContent = "Terkirim! Lihat aspirasimu di tab Papan Aspirasi.";
-  formStatus.className = "form-status ok";
-  renderPapan();
+  try {
+    await addDoc(aspirasiRef, {
+      kategori,
+      isi,
+      createdAt: serverTimestamp(),
+      upvotes: 0,
+      downvotes: 0
+    });
+    form.reset();
+    charCount.textContent = "0";
+    formStatus.textContent = "Terkirim! Aspirasimu langsung muncul di tab Papan Aspirasi untuk semua orang.";
+    formStatus.className = "form-status ok";
+  } catch (err) {
+    console.error(err);
+    formStatus.textContent = "Gagal mengirim. Periksa koneksi internet dan coba lagi.";
+    formStatus.className = "form-status err";
+  } finally {
+    btnSubmit.disabled = false;
+  }
 });
 
 // ------------------------------------------------------------
-// Papan Aspirasi (list + vote)
+// Papan Aspirasi (list + vote, realtime dari semua device)
 // ------------------------------------------------------------
+let allAspirasi = [];
 let currentFilter = "semua";
 let currentSort = "terbaru";
 const papanList = document.getElementById("papan-list");
@@ -142,18 +139,18 @@ document.getElementById("sort-select").addEventListener("change", (e) => {
 });
 
 function renderPapan() {
-  let items = getAspirasi();
+  let items = [...allAspirasi];
   if (currentFilter !== "semua") {
     items = items.filter(a => a.kategori === currentFilter);
   }
   if (currentSort === "terpopuler") {
     items.sort((a, b) => (b.upvotes - b.downvotes) - (a.upvotes - a.downvotes));
   } else {
-    items.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    items.sort((a, b) => (b._createdMs || 0) - (a._createdMs || 0));
   }
 
   if (items.length === 0) {
-    papanList.innerHTML = `<p class="empty-state">Belum ada aspirasi pada kategori ini.</p>`;
+    papanList.innerHTML = `<p class="empty-state">Belum ada aspirasi pada kategori ini. Jadilah yang pertama mengirim di tab "Ajukan Aspirasi".</p>`;
     return;
   }
 
@@ -180,34 +177,48 @@ function renderPapan() {
   }).join("");
 }
 
-papanList.addEventListener("click", (e) => {
+papanList.addEventListener("click", async (e) => {
   const card = e.target.closest(".aspirasi-card");
   if (!card) return;
   const id = card.dataset.id;
 
-  let type = null;
-  if (e.target.closest(".vote-up")) type = "up";
-  if (e.target.closest(".vote-down")) type = "down";
-  if (!type) return;
+  let field = null, type = null;
+  if (e.target.closest(".vote-up")) { field = "upvotes"; type = "up"; }
+  if (e.target.closest(".vote-down")) { field = "downvotes"; type = "down"; }
+  if (!field) return;
 
   const votedMap = getVotedMap();
   const already = votedMap[id];
-  if (already === type) return; // sudah vote yang sama
+  if (already === type) return; // sudah vote yang sama, abaikan
 
-  const list = getAspirasi();
-  const item = list.find(a => a.id === id);
-  if (!item) return;
-
-  if (type === "up") {
-    item.upvotes += 1;
-    if (already === "down") item.downvotes -= 1;
-  } else {
-    item.downvotes += 1;
-    if (already === "up") item.upvotes -= 1;
+  try {
+    const updates = { [field]: increment(1) };
+    if (already === "up" && type === "down") updates.upvotes = increment(-1);
+    if (already === "down" && type === "up") updates.downvotes = increment(-1);
+    await updateDoc(doc(db, "aspirasi", id), updates);
+    setVoted(id, type);
+  } catch (err) {
+    console.error(err);
   }
-  saveAspirasi(list);
-  setVoted(id, type);
-  renderPapan();
 });
 
-renderPapan();
+// ------------------------------------------------------------
+// Realtime listener — inilah yang membuat semua device tersinkron
+// ------------------------------------------------------------
+const qAspirasi = query(aspirasiRef, orderBy("createdAt", "desc"));
+onSnapshot(qAspirasi, (snap) => {
+  allAspirasi = snap.docs.map(d => {
+    const data = d.data();
+    return {
+      id: d.id,
+      ...data,
+      upvotes: data.upvotes || 0,
+      downvotes: data.downvotes || 0,
+      _createdMs: data.createdAt?.toMillis ? data.createdAt.toMillis() : 0
+    };
+  });
+  renderPapan();
+}, (err) => {
+  console.error(err);
+  papanList.innerHTML = `<p class="empty-state">Gagal memuat data. Pastikan firebaseConfig di app.js sudah diisi dengan benar dan rules Firestore sudah dipasang.</p>`;
+});
