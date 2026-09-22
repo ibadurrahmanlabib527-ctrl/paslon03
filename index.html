@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SOCIETY — Sinergi OSIS & Aspirasi Creativity (Demo)</title>
+<meta name="description" content="Papan aspirasi digital OSIS. Sampaikan idemu, dukung aspirasi lain, secara anonim." />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📌</text></svg>" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead__inner">
+    <div class="masthead__brand">
+      <span class="masthead__pin">📌</span>
+      <div>
+        <h1 class="masthead__title">SOCIETY</h1>
+        <p class="masthead__tagline">sinergi osis &amp; aspirasi creativity</p>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Navigasi utama">
+      <button class="tab is-active" data-tab="ajukan" role="tab" aria-selected="true">Ajukan Aspirasi</button>
+      <button class="tab" data-tab="papan" role="tab" aria-selected="false">Papan Aspirasi</button>
+    </nav>
+  </div>
+</header>
+
+<main class="stage">
+
+  <!-- ===== TAB: AJUKAN ===== -->
+  <section id="tab-ajukan" class="panel is-active">
+    <div class="panel__intro">
+      <h2>Sampaikan aspirasimu</h2>
+      <p>Semua kiriman bersifat anonim — tidak ada nama atau kelas yang ditanyakan. Pilih bidang yang paling sesuai, lalu tuliskan aspirasimu.</p>
+    </div>
+
+    <form id="form-aspirasi" class="card-form">
+      <fieldset class="kategori-picker">
+        <legend>Bidang aspirasi</legend>
+        <label class="kategori-opt">
+          <input type="radio" name="kategori" value="ide-acara" required>
+          <span class="kategori-opt__box">
+            <strong>Ide Acara</strong>
+            <small>Usulan kegiatan, lomba, atau acara baru</small>
+          </span>
+        </label>
+        <label class="kategori-opt">
+          <input type="radio" name="kategori" value="evaluasi">
+          <span class="kategori-opt__box">
+            <strong>Evaluasi</strong>
+            <small>Kritik atau masukan untuk program berjalan</small>
+          </span>
+        </label>
+        <label class="kategori-opt">
+          <input type="radio" name="kategori" value="akademis">
+          <span class="kategori-opt__box">
+            <strong>Struggle Akademis</strong>
+            <small>Kesulitan belajar, jadwal, atau fasilitas kelas</small>
+          </span>
+        </label>
+      </fieldset>
+
+      <label class="field">
+        <span class="field__label">Isi aspirasi</span>
+        <textarea id="isi-aspirasi" name="isi" rows="5" maxlength="600" placeholder="Contoh: Jadwal try out sering bentrok dengan ekskul, bisa dievaluasi lagi?" required></textarea>
+        <span class="field__count"><span id="char-count">0</span>/600</span>
+      </label>
+
+      <button type="submit" class="btn btn--primary">Kirim secara anonim</button>
+      <p id="form-status" class="form-status" role="status"></p>
+    </form>
+  </section>
+
+  <!-- ===== TAB: PAPAN ===== -->
+  <section id="tab-papan" class="panel">
+    <div class="panel__intro panel__intro--row">
+      <div>
+        <h2>Papan aspirasi</h2>
+        <p>Lihat aspirasi dari teman-teman lain dan beri dukungan.</p>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="chip-group" id="filter-kategori">
+        <button class="chip is-active" data-filter="semua">Semua</button>
+        <button class="chip" data-filter="ide-acara">Ide Acara</button>
+        <button class="chip" data-filter="evaluasi">Evaluasi</button>
+        <button class="chip" data-filter="akademis">Akademis</button>
+      </div>
+      <select id="sort-select" class="select">
+        <option value="terbaru">Terbaru</option>
+        <option value="terpopuler">Paling didukung</option>
+      </select>
+    </div>
+
+    <div id="papan-list" class="card-grid">
+      <p class="empty-state">Belum ada aspirasi. Jadilah yang pertama mengirim di tab "Ajukan Aspirasi".</p>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <p>SOCIETY — Program Kerja OSIS · versi demo, data tersimpan di browser ini saja</p>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
