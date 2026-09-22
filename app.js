@@ -15,13 +15,13 @@ import {
 
 // >>> GANTI dengan config project Firebase kamu (Project settings > SDK setup) <<<
 const firebaseConfig = {
-  apiKey: "AIzaSyBrNW_pw1Bfxzw-0I_zDD4mPwcg3XLriGs",
-  authDomain: "society-osis.firebaseapp.com",
-  projectId: "society-osis",
-  storageBucket: "society-osis.firebasestorage.app",
-  messagingSenderId: "964398698679",
-  appId: "1:964398698679:web:e5428682b672cf5ee33d32",
-  measurementId: "G-XQSYCDMVCR"
+  apiKey: "AIzaSyCLO-Mb1JDKGYiVTt6Nz1qZbC4Y2txLd4k",
+  authDomain: "societyosis.firebaseapp.com",
+  projectId: "societyosis",
+  storageBucket: "societyosis.firebasestorage.app",
+  messagingSenderId: "425227332568",
+  appId: "1:425227332568:web:021ecc16ce385b5683e0ad",
+  measurementId: "G-NSNLESVQ81"
 };
 
 const app = initializeApp(firebaseConfig);
