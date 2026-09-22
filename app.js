@@ -15,12 +15,13 @@ import {
 
 // >>> GANTI dengan config project Firebase kamu (Project settings > SDK setup) <<<
 const firebaseConfig = {
-  apiKey: "GANTI_DENGAN_API_KEY",
-  authDomain: "GANTI.firebaseapp.com",
-  projectId: "GANTI_PROJECT_ID",
-  storageBucket: "GANTI.appspot.com",
-  messagingSenderId: "GANTI",
-  appId: "GANTI"
+  apiKey: "AIzaSyBrNW_pw1Bfxzw-0I_zDD4mPwcg3XLriGs",
+  authDomain: "society-osis.firebaseapp.com",
+  projectId: "society-osis",
+  storageBucket: "society-osis.firebasestorage.app",
+  messagingSenderId: "964398698679",
+  appId: "1:964398698679:web:e5428682b672cf5ee33d32",
+  measurementId: "G-XQSYCDMVCR"
 };
 
 const app = initializeApp(firebaseConfig);
